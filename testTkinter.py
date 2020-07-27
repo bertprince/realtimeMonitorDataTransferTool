@@ -8,6 +8,10 @@ import time as T
 import tkMessageBox
 import ttk
 from tkFileDialog import askdirectory
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 window = tk.Tk()
 window.title('Data Transfer Tool for Server and Client')
