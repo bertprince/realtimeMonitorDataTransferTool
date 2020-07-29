@@ -1,17 +1,14 @@
 # -*- coding:utf-8 -*-
-import Tkinter as tk
+import tkinter as tk
 import os
 import shutil
 import socket
 import threading
 import time as T
-import tkMessageBox
-import ttk
-from tkFileDialog import askdirectory
-import sys
+from tkinter import messagebox
+from tkinter import ttk
+from tkinter.filedialog import askdirectory
 
-reload(sys)
-sys.setdefaultencoding('utf8')
 
 window = tk.Tk()
 window.title('Data Transfer Tool for Server and Client')
@@ -199,7 +196,7 @@ def StartSocketServer():
                     try:
                         shutil.move(path + '/' + file, path + '/server-move/' + '/')
                     except:
-                        tkMessageBox.showwarning('转移失败','文件转移失败，请手动转移%s文件，以免重复上传' % file)
+                        messagebox.showwarning('转移失败','文件转移失败，请手动转移%s文件，以免重复上传' % file)
                 else:
                     print ("非csv文件不传输")
             else:
@@ -268,13 +265,13 @@ def StartBt():
     try:
         int(delta_time_entry.get())
     except:
-        tkMessageBox.showwarning('整型判断','输入的不是整型数字，请输入整型秒数。')
+        messagebox.showwarning('整型判断','输入的不是整型数字，请输入整型秒数。')
     global stop_socket
     stop_socket = False
     #时间间隔、path、脚本选择均完成
     if var_delta_time_text.get() != "" and var_path.get() != "" and comboxlist.get() != "请选择":
         if len(str(ip.get()).split('.'))!=4:
-            tkMessageBox.showwarning('IP检测','IP地址不正确，请检查IP地址格式后重试。')
+            messagebox.showwarning('IP检测','IP地址不正确，请检查IP地址格式后重试。')
         else:
             # print(stop_socket)
             global ip_str,port_str
@@ -292,12 +289,12 @@ def StartBt():
             # runTask(runForUploaded,second=int(var_delta_time_text.get()))
 
     else:
-        tkMessageBox.showwarning('信息不全','请完善信息后重试')
+        messagebox.showwarning('信息不全','请完善信息后重试')
     #测试socket启停
 def StopBtDown():
     global stop_socket
     stop_socket = True
-    tkMessageBox.showwarning('强制停止','强制停止程序后，如果需要再次启动程序，需要将本程序关闭，并在此开启后方可正常运行。')
+    messagebox.showwarning('强制停止','强制停止程序后，如果需要再次启动程序，需要将本程序关闭，并在此开启后方可正常运行。')
     var_mess_text.set("传输暂停，请重启程序以继续进行。")
 def PathBT():
     path_ = askdirectory()

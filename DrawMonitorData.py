@@ -8,27 +8,31 @@ from tkinter import ttk
 from matplotlib.figure import Figure
 import pandas as pd
 from tkinter.filedialog import askdirectory
+from watchdog.observers import Observer
+from watchdog.events import *
 import tkutils as tku
 import cmath
 import math
-from watchdog.observers import Observer
-from watchdog.events import *
+import threading
+
 
 class App:
     def __init__(self):
         self.root = tk.Tk()
         self.root.geometry("%dx%d" % (800, 600))   # 窗体尺寸
         tku.center_window(self.root)               # 将窗体移动到屏幕中央
-        # self.root.iconbitmap("images\\Money.ico")  # 窗体图标
+        # self.root.iconbitmap("images\\Money.ico")# 窗体图标
         self.root.title("位移监测")
-        self.root.resizable(True, True)          # 设置窗体不可改变大小
+        self.root.resizable(True, True)            # 设置窗体不可改变大小
         self.no_title = False
         self.dataPath='请选择路径'
+        self.filePath=""
         self.modifyTheata=170
         self.fileList=[]
         self.currentFilename=''
         self.show_title()
         self.body()
+
 
     def body(self):
         #上部工具条
@@ -86,27 +90,31 @@ class App:
         del self.fileList[:]#清空数据
         self.file_listBox.delete(0,tk.END)
         self.dataPath = askdirectory()
-        self.filePathLable["text"]=self.dataPath
+        self.filePathLable["text"] = self.dataPath
         # print self.dataPath
         dir = os.listdir(self.dataPath)
         f_num = len(dir)
-        f_Name=[]
+        f_Name = []
         for f in dir:
             if f[-4:] != ".csv":
                 f_num = f_num - 1
             else:
                 f_Name.append(f)
-                self.file_listBox.insert(tk.END,f)
-        self.fileList=f_Name
-    def selectListBox(self,fileName):
-        dataPath= self.dataPath +'/'+ fileName
-        data = pd.read_csv(dataPath, sep=',', header=None,
+                self.file_listBox.insert(tk.END, f)
+        self.fileList = f_Name
+        # watchThreading = threading.Thread(target=watchFile())
+        # watchThreading.setDaemon(True)
+        # watchThreading.start()
+
+    def selectListBox(self):
+
+        self.a.cla()#clear plot
+        data = pd.read_csv(self.filePath, sep=',', header=None,
                            names=['Theata', 'Radius', 'Quality'])
         dataTheata = data['Theata'].values.tolist()
         dataRadius = data['Radius'].values.tolist()
         x = []
         y = []
-
         try:
             delta = float(self.theataEntry.get()) # 矫正值
         except:
@@ -117,33 +125,20 @@ class App:
                 y.append(dataRadius[id] * cmath.sin(math.radians(dataTheata[id] + delta)))
         x.append(x[0])
         y.append(y[0])
-        self.a.clear()
-        self.a.scatter(x, y, color='red')
-        self.a.plot(x, y)
-
-        self.canvas.draw()  # 注意show方法已经过时了,这里改用draw
+        # 绘图区域
+        self.a.scatter(x,y,color='red')
+        self.a.plot(x,y,color='yellow')
+        self.canvas.draw()
 
 
     def listboxSelcClick(self,event):
         self.currentFilename= self.fileList[self.file_listBox.curselection()[0]]
-        self.selectListBox(self.currentFilename)
+        self.filePath=self.dataPath+"/"+self.currentFilename
+        self.selectListBox()
 
     def applyModifyTheata(self):
-        self.selectListBox(self.currentFilename)
+        self.selectListBox()
 
-    def watchFile(self):
-        event_handler = MyHandler()
-        observer = Observer()
-        observer.schedule(event_handler, self.dataPath, recursive=True)
-        observer.start()
-
-        try:
-            while True:
-                time.sleep(1)
-
-        except KeyboardInterrupt:
-            observer.stop()
-        observer.join()
 
 class MyHandler(FileSystemEventHandler):
     def on_modified(self, event):
@@ -153,7 +148,23 @@ class MyHandler(FileSystemEventHandler):
         print("文件被创建了 %s" % event.src_path)
 
 
+def watchFile():
+    print("线程开始")
+    event_handler = MyHandler()
+    observer = Observer()
+    observer.schedule(event_handler, app.dataPath, recursive=True)
+    observer.start()
+
+    try:
+        while True:
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
 
 if __name__ == "__main__":
     app = App()
     app.root.mainloop()
+
+
