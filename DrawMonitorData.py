@@ -14,7 +14,20 @@ import tkutils as tku
 import cmath
 import math
 import threading
+import matplotlib.pyplot as plt
 
+def watchFile(datapath):
+    print("线程开始")
+    event_handler = MyHandler()
+    observer = Observer()
+    observer.schedule(event_handler, datapath, recursive=True)
+    observer.start()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()
 
 class App:
     def __init__(self):
@@ -102,14 +115,14 @@ class App:
                 f_Name.append(f)
                 self.file_listBox.insert(tk.END, f)
         self.fileList = f_Name
-        # watchThreading = threading.Thread(target=watchFile())
-        # watchThreading.setDaemon(True)
-        # watchThreading.start()
+        watchThreading = threading.Thread(target=watchFile,name="watchthreading",args=((self.dataPath,)))
+        watchThreading.setDaemon(True)
+        watchThreading.start()
 
-    def selectListBox(self):
+    def selectListBox(self,filepath):
 
         self.a.cla()#clear plot
-        data = pd.read_csv(self.filePath, sep=',', header=None,
+        data = pd.read_csv(filepath, sep=',', header=None,
                            names=['Theata', 'Radius', 'Quality'])
         dataTheata = data['Theata'].values.tolist()
         dataRadius = data['Radius'].values.tolist()
@@ -128,17 +141,16 @@ class App:
         # 绘图区域
         self.a.scatter(x,y,color='red')
         self.a.plot(x,y,color='yellow')
-        self.canvas.draw()
+        self.canvas.draw_idle()
 
 
     def listboxSelcClick(self,event):
         self.currentFilename= self.fileList[self.file_listBox.curselection()[0]]
         self.filePath=self.dataPath+"/"+self.currentFilename
-        self.selectListBox()
+        self.selectListBox(self.filePath)
 
     def applyModifyTheata(self):
-        self.selectListBox()
-
+        self.selectListBox(self.filePath)
 
 class MyHandler(FileSystemEventHandler):
     def on_modified(self, event):
@@ -146,22 +158,11 @@ class MyHandler(FileSystemEventHandler):
 
     def on_created(self, event):
         print("文件被创建了 %s" % event.src_path)
-
-
-def watchFile():
-    print("线程开始")
-    event_handler = MyHandler()
-    observer = Observer()
-    observer.schedule(event_handler, app.dataPath, recursive=True)
-    observer.start()
-
-    try:
-        while True:
-            time.sleep(1)
-
-    except KeyboardInterrupt:
-        observer.stop()
-    observer.join()
+        # data=pd.read_csv(event.src_path, sep=',', header=None,
+        #                    names=['Theata', 'Radius', 'Quality'])
+        # print(data)
+        app.file_listBox.insert(tk.END, str(event.src_path).split('\\')[1])
+        app.selectListBox(event.src_path)
 
 if __name__ == "__main__":
     app = App()
