@@ -1,21 +1,18 @@
 # -*- coding:utf-8 -*-
 import os
-import sys
-import matplotlib
-from matplotlib.backend_bases import key_press_handler
-from matplotlib.backends._backend_tk import NavigationToolbar2Tk
+import time
 import tkinter as tk
-from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends._backend_tk import NavigationToolbar2Tk
+from tkinter import ttk
 from matplotlib.figure import Figure
 import pandas as pd
 from tkinter.filedialog import askdirectory
-import numpy as np
 import tkutils as tku
 import cmath
 import math
-reload(sys)
-sys.setdefaultencoding('utf8')
+from watchdog.observers import Observer
+from watchdog.events import *
 
 class App:
     def __init__(self):
@@ -70,20 +67,6 @@ class App:
         #绘图区域
         self.f = Figure(figsize=(5, 4), dpi=100)
         self.a = self.f.add_subplot(111)  # 添加子图:1行1列第1个
-        # 数据
-        # data = pd.read_csv('C:/Users/123/Desktop/motor20200109/2020-07-08 18-59-52ldat.csv', sep=',', header=None,
-        #                    names=['Theata', 'Radius', 'Quality'])
-        # dataTheata = data['Theata'].values.tolist()
-        # dataRadius = data['Radius'].values.tolist()
-        # x = []
-        # y = []
-        # delta = 170  # 矫正值
-        # for id in range(len(dataTheata)):
-        #     if not dataRadius[id] < 0:
-        #         x.append(dataRadius[id] * cmath.cos(math.radians(dataTheata[id] + delta)))
-        #         y.append(dataRadius[id] * cmath.sin(math.radians(dataTheata[id] + delta)))
-        # self.a.scatter(x, y, color='red')
-        # self.a.plot(x, y)
 
         # 将绘制的图形显示到tkinter:创建属于root的canvas画布,并将图f置于画布上
         self.canvas = FigureCanvasTkAgg(self.f, master=self.root)
@@ -147,6 +130,29 @@ class App:
 
     def applyModifyTheata(self):
         self.selectListBox(self.currentFilename)
+
+    def watchFile(self):
+        event_handler = MyHandler()
+        observer = Observer()
+        observer.schedule(event_handler, self.dataPath, recursive=True)
+        observer.start()
+
+        try:
+            while True:
+                time.sleep(1)
+
+        except KeyboardInterrupt:
+            observer.stop()
+        observer.join()
+
+class MyHandler(FileSystemEventHandler):
+    def on_modified(self, event):
+        print("文件被修改了 %s" % event.src_path)
+
+    def on_created(self, event):
+        print("文件被创建了 %s" % event.src_path)
+
+
 
 if __name__ == "__main__":
     app = App()
