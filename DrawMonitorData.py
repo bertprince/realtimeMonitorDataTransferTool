@@ -4,17 +4,14 @@ import time
 import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends._backend_tk import NavigationToolbar2Tk
-from tkinter import ttk
 from matplotlib.figure import Figure
 import pandas as pd
 from tkinter.filedialog import askdirectory
 from watchdog.observers import Observer
 from watchdog.events import *
 import tkutils as tku
-import cmath
 import math
 import threading
-import matplotlib.pyplot as plt
 
 def watchFile(datapath):
     print("线程开始")
@@ -34,7 +31,7 @@ class App:
         self.root = tk.Tk()
         self.root.geometry("%dx%d" % (800, 600))   # 窗体尺寸
         tku.center_window(self.root)               # 将窗体移动到屏幕中央
-        # self.root.iconbitmap("images\\Money.ico")# 窗体图标
+        self.root.iconbitmap("logo.ico")# 窗体图标
         self.root.title("位移监测")
         self.root.resizable(True, True)            # 设置窗体不可改变大小
         self.no_title = False
@@ -54,17 +51,18 @@ class App:
         #数据路径按钮
         self.dataPathBt = tk.Button(self.frame_topBar, text="请选择路径", command=self.dataPathSelection)
         self.dataPathBt.pack(side=tk.LEFT,padx=10)
-
-        self.deviceSelect = ttk.Combobox(self.frame_topBar,values=['device-a','device-b','device-c'])
-        self.deviceSelect.current(0)
-
-        self.deviceSelect.pack(side=tk.LEFT,padx=10)
-
-        self.compareMode = tk.Checkbutton(self.frame_topBar,text='数据对比模式',onvalue=1,offvalue=0)
-        self.compareMode.pack(side=tk.LEFT,padx=10)
-
-        self.realtimeUpdate = tk.Checkbutton(self.frame_topBar, text='实时更新', onvalue=1, offvalue=0)
-        self.realtimeUpdate.pack(side=tk.LEFT, padx=10)
+        #设备选择--隐藏未开发
+        # self.deviceSelect = ttk.Combobox(self.frame_topBar,values=['device-a','device-b','device-c'])
+        # self.deviceSelect.current(0)
+        #
+        # self.deviceSelect.pack(side=tk.LEFT,padx=10)
+        #数据显示模式-20200730隐藏-----------------------
+        # self.compareMode = tk.Checkbutton(self.frame_topBar,text='数据对比模式',onvalue=1,offvalue=0)
+        # self.compareMode.pack(side=tk.LEFT,padx=10)
+        #
+        # self.realtimeUpdate = tk.Checkbutton(self.frame_topBar, text='实时更新', onvalue=1, offvalue=0)
+        # self.realtimeUpdate.pack(side=tk.LEFT, padx=10)
+        #----------------------------------------------
         tk.Label(self.frame_topBar,text="矫正角").pack(side=tk.LEFT,padx=10)
         self.theataEntry = tk.Entry(self.frame_topBar,width=10,textvariable=str(self.modifyTheata))
         self.theataEntry.pack(side=tk.LEFT,padx=10)
@@ -87,7 +85,7 @@ class App:
 
         # 将绘制的图形显示到tkinter:创建属于root的canvas画布,并将图f置于画布上
         self.canvas = FigureCanvasTkAgg(self.f, master=self.root)
-        self.canvas.draw()  # 注意show方法已经过时了,这里改用draw
+        self.canvas.draw_idle()  # 注意show方法已经过时了,这里改用draw
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=1)  # 随窗口大小调整而调整
 
         # matplotlib的导航工具栏显示上来(默认是不会显示它的)
@@ -134,13 +132,14 @@ class App:
             delta=0
         for id in range(len(dataTheata)):
             if not dataRadius[id] < 0:
-                x.append(dataRadius[id] * cmath.cos(math.radians(dataTheata[id] + delta)))
-                y.append(dataRadius[id] * cmath.sin(math.radians(dataTheata[id] + delta)))
+                #cmath是复数运算
+                x.append(dataRadius[id] * math.cos(math.radians(dataTheata[id] + delta)))
+                y.append(dataRadius[id] * math.sin(math.radians(dataTheata[id] + delta)))
         x.append(x[0])
         y.append(y[0])
         # 绘图区域
         self.a.scatter(x,y,color='red')
-        self.a.plot(x,y,color='yellow')
+        self.a.plot(x,y,color='blue')
         self.canvas.draw_idle()
 
 
@@ -162,6 +161,7 @@ class MyHandler(FileSystemEventHandler):
         #                    names=['Theata', 'Radius', 'Quality'])
         # print(data)
         app.file_listBox.insert(tk.END, str(event.src_path).split('\\')[1])
+        app.filePath=event.src_path
         app.selectListBox(event.src_path)
 
 if __name__ == "__main__":
