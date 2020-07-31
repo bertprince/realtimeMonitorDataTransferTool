@@ -13,6 +13,9 @@ from tkinter.filedialog import askdirectory
 window = tk.Tk()
 window.title('Data Transfer Tool for Server and Client')
 window.geometry('500x300')
+window.iconbitmap("logo.ico")# 窗体图标
+window.title("监测数据传输工具 copyright：Mining514_02483689193")
+window.resizable(False,False)
 #切断socket的变量
 stop_socket = False
 hostname = socket.gethostname()
@@ -57,7 +60,7 @@ def StartSocketServer():
         for f in dir:
             if f[-4:] != ".csv":
                 f_num = f_num - 1
-        to_client.send(str(f_num))
+        to_client.send(bytes(f_num))
         to_client.recv(8)
         # server move ; client move
         for file in dir:
@@ -104,7 +107,7 @@ def StartSocketClient():
     s = socket.socket()  # 创建 socket 对象
     host = socket.gethostname()  # 获取本地主机名
     s.connect((ip_str, int(port_str)))
-    s.send("\xAA\x96\xAC\x00\x01\x00\x01\x69")
+    s.send(bytes("\xAA\x96\xAC\x00\x01\x00\x01\x69",encoding='utf-8'))
     while not stop_socket:  # 进入循环，不断接受客户端的链接请求
         file_num = s.recv(1024)
         # print(file_num)
