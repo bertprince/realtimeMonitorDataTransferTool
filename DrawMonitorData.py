@@ -21,7 +21,7 @@ def watchFile(datapath):
     observer.start()
     try:
         while True:
-            time.sleep(1)
+            time.sleep(10)#影响了实时传输的数据是否能正常显示
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
@@ -32,7 +32,7 @@ class App:
         self.root.geometry("%dx%d" % (800, 600))   # 窗体尺寸
         tku.center_window(self.root)               # 将窗体移动到屏幕中央
         self.root.iconbitmap("logo.ico")# 窗体图标
-        self.root.title("位移监测")
+        self.root.title("位移监测数据可视化 copyright：Mining514_02483689193")
         self.root.resizable(True, True)            # 设置窗体不可改变大小
         self.no_title = False
         self.dataPath='请选择路径'
@@ -80,7 +80,7 @@ class App:
         self.file_listBox.bind("<Double-1>",self.listboxSelcClick)
 
         #绘图区域
-        self.f = Figure(figsize=(5, 4), dpi=100)
+        self.f = Figure(figsize=(5, 5), dpi=100)
         self.a = self.f.add_subplot(111)  # 添加子图:1行1列第1个
 
         # 将绘制的图形显示到tkinter:创建属于root的canvas画布,并将图f置于画布上
@@ -101,7 +101,7 @@ class App:
         del self.fileList[:]#清空数据
         self.file_listBox.delete(0,tk.END)
         self.dataPath = askdirectory()
-        self.filePathLable["text"] = self.dataPath
+        self.filePathLable["text"] = "监测文件夹：" + self.dataPath
         # print self.dataPath
         dir = os.listdir(self.dataPath)
         f_num = len(dir)
@@ -130,22 +130,54 @@ class App:
             delta = float(self.theataEntry.get()) # 矫正值
         except:
             delta=0
-        for id in range(len(dataTheata)):
-            if not dataRadius[id] < 0:
-                #cmath是复数运算
-                x.append(dataRadius[id] * math.cos(math.radians(dataTheata[id] + delta)))
-                y.append(dataRadius[id] * math.sin(math.radians(dataTheata[id] + delta)))
-        x.append(x[0])
-        y.append(y[0])
-        # 绘图区域
-        self.a.scatter(x,y,color='red')
-        self.a.plot(x,y,color='blue')
-        self.canvas.draw_idle()
+        #记录是否有异常
+        errorID=0
+        #规避数据重复异常
+        deltaTheata=0
+        loopTimes=0
+        for i in range(len(dataTheata)-1):
+            if float(dataTheata[i])>=0 and float(dataTheata[i+1])>=0:
+                deltaTheata=float(dataTheata[i+1])-float(dataTheata[i])
+                break
+        if deltaTheata>0:
+            loopTimes=int(360/deltaTheata)+1
+        print ("旋转角度%s°,应有数据量%s个" % (deltaTheata,loopTimes))
+        #
+        try:
+            if loopTimes>0:
+                for id in range(loopTimes):
+                    if not float(dataRadius[id]) < 0:
+                        if not float(dataTheata[id])<0:
+                            # cmath是复数运算
+                            try:
+                                x.append(
+                                    float(dataRadius[id]) * math.cos(
+                                        math.radians(float(dataTheata[id]) + float(delta))))
+                                y.append(
+                                    float(dataRadius[id]) * math.sin(
+                                        math.radians(float(dataTheata[id]) + float(delta))))
+                            except:
+                                errorID += 1
+                print("忽略异常点%s个。" % errorID)
+                # 闭合曲线
+                x.append(x[0])
+                y.append(y[0])
+                # 绘图区域
+                self.a.set_title(filepath.split('/')[-1])
+                self.a.scatter(x, y, color='red')
+                self.a.plot(x, y, color='blue')
+                self.canvas.draw_idle()
+            else:
+                self.a.set_title("数据异常")
+        except:
+            self.a.set_title("数据异常")
 
 
     def listboxSelcClick(self,event):
         self.currentFilename= self.fileList[self.file_listBox.curselection()[0]]
+        # print(self.currentFilename)
         self.filePath=self.dataPath+"/"+self.currentFilename
+        # print(self.filePath)
         self.selectListBox(self.filePath)
 
     def applyModifyTheata(self):
@@ -153,16 +185,48 @@ class App:
 
 class MyHandler(FileSystemEventHandler):
     def on_modified(self, event):
-        print("文件被修改了 %s" % event.src_path)
-
+        #print("文件被修改了 %s" % event.src_path)
+        del app.fileList[:]  # 清空数据
+        app.file_listBox.delete(0, tk.END)
+        app.filePathLable["text"] = "监测文件夹：" + app.dataPath
+        # print self.dataPath
+        dir = os.listdir(app.dataPath)
+        f_num = len(dir)
+        f_Name = []
+        for f in dir:
+            if f[-4:] != ".csv":
+                f_num = f_num - 1
+            else:
+                f_Name.append(f)
+                app.file_listBox.insert(tk.END, f)
+        app.fileList = f_Name
+        # app.file_listBox.insert(tk.END, str(event.src_path).split('\\')[-1])
+        app.selectListBox(event.src_path)
+        app.filePath = event.src_path
     def on_created(self, event):
-        print("文件被创建了 %s" % event.src_path)
+        #print("文件被创建了 %s" % event.src_path)
         # data=pd.read_csv(event.src_path, sep=',', header=None,
         #                    names=['Theata', 'Radius', 'Quality'])
         # print(data)
-        app.file_listBox.insert(tk.END, str(event.src_path).split('\\')[1])
-        app.filePath=event.src_path
+        #该路径‘/’、‘\’共存，暂未处理
+        del app.fileList[:]  # 清空数据
+        app.file_listBox.delete(0, tk.END)
+        app.filePathLable["text"] = "监测文件夹：" + app.dataPath
+        # print self.dataPath
+        dir = os.listdir(app.dataPath)
+        f_num = len(dir)
+        f_Name = []
+        for f in dir:
+            if f[-4:] != ".csv":
+                f_num = f_num - 1
+            else:
+                f_Name.append(f)
+                app.file_listBox.insert(tk.END, f)
+        app.fileList = f_Name
+        # app.file_listBox.insert(tk.END, str(event.src_path).split('\\')[-1])
         app.selectListBox(event.src_path)
+        app.filePath=event.src_path
+
 
 if __name__ == "__main__":
     app = App()
