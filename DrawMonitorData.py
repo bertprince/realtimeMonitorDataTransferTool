@@ -35,7 +35,7 @@ class App:
         self.root.title("位移监测数据可视化 copyright：Mining514_02483689193")
         self.root.resizable(True, True)            # 设置窗体不可改变大小
         self.no_title = False
-        self.dataPath='请选择路径'
+        self.dataPath=os.path.dirname(__file__)
         self.filePath=""
         self.modifyTheata=170
         self.fileList=[]
