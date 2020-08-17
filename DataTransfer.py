@@ -8,7 +8,10 @@ import time as T
 from tkinter import messagebox
 from tkinter import ttk
 from tkinter.filedialog import askdirectory
-
+import tkutils as tku
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 window = tk.Tk()
 window.title('Data Transfer Tool for Server and Client')
@@ -79,7 +82,7 @@ def StartSocketServer():
                         to_client.send(frame_data)
                         has_send += len(frame_data)
                     fout.close()
-                    T.sleep(2)
+                    T.sleep(5)
                     if not os.path.isdir(path + '/server-move'):
                         os.makedirs(path + '/server-move')
                     try:
@@ -94,7 +97,7 @@ def StartSocketServer():
         if stop_socket:
             print ("program exit normally:-> close socket")
         else:
-            T.sleep(int(delta_time_entry.get()))
+            T.sleep(60)#固定为60s监测一次
             print("server run %s times" % server_runtimes)
             var_runtimes_text.set("暂无数据传输，服务器已经监测文件夹%s次。" % str(server_runtimes))
     print("stoped by stop_socket variable")
@@ -130,6 +133,7 @@ def StartSocketClient():
                 # time.sleep(2)
                 f_pic.close()
                 # csvToSQL("./client/" + filename)
+                var_comment_text.set("成功接收%s文件，正在持续接收中..." % filename)
             else:
                 print("无数据，等待下次监听")
     s.close()
@@ -145,14 +149,15 @@ def StartBt():
     # print(var_delta_time_text.get() == "")
     # print(var_path.get()=="")
     #输入数字的检测
-    try:
-        int(delta_time_entry.get())
-    except:
-        messagebox.showwarning('整型判断','输入的不是整型数字，请输入整型秒数。')
+    # try:
+    #     int(delta_time_entry.get())
+    # except:
+    #
+    #     messagebox.showwarning('整型判断','输入的不是整型数字，请输入整型秒数。')
     global stop_socket
     stop_socket = False
     #时间间隔、path、脚本选择均完成
-    if var_delta_time_text.get() != "" and var_path.get() != "" and comboxlist.get() != "请选择":
+    if var_path.get() != "" and comboxlist.get() != "请选择":
         if len(str(ip.get()).split('.'))!=4:
             messagebox.showwarning('IP检测','IP地址不正确，请检查IP地址格式后重试。')
         else:
@@ -185,7 +190,8 @@ def PathBT():
 def ComboxChange(*args):
     print (comboxlist.get())
     if comboxlist.get() == "client":
-        var_comment_text.set("本电脑作为client启动。")
+        var_comment_text.set("等待接收文件...")
+        var_runtimes_text.set("Client端，正在接收文件。")
     elif comboxlist.get() == "server":
         var_comment_text.set("本电脑作为server启动。")
     elif comboxlist.get() == "both server and client":
@@ -194,12 +200,15 @@ def ComboxChange(*args):
         var_comment_text.set("请选择需要启动的脚本。")
 
 #components
-delta_time_title = tk.Label(window,text="时间间隔",font=('黑体',12))
-delta_time_title.place(x = 10, y = 10, width=75, height=25)
-delta_time_entry = tk.Entry(window,font=('黑体',12),textvariable=var_delta_time_text)
-delta_time_entry.place(x=85,y=10,width=150,height=25)
-delta_time_unit = tk.Label(window,text="S",font=('黑体',12))
-delta_time_unit.place(x=235,y=10,width=25,height=25)
+# delta_time_title = tk.Label(window,text="时间间隔",font=('黑体',12))
+# delta_time_title.place(x = 10, y = 10, width=75, height=25)
+# delta_time_entry = tk.Entry(window,font=('黑体',12),textvariable=var_delta_time_text)
+# delta_time_entry.place(x=85,y=10,width=150,height=25)
+# delta_time_unit = tk.Label(window,text="S",font=('黑体',12))
+# delta_time_unit.place(x=235,y=10,width=25,height=25)
+tku.center_window(window)               # 将窗体移动到屏幕中央
+window.iconbitmap("logo.ico")# 窗体图标
+window.title("位移监测数据传输工具 Mining514_02483689193")
 data_path = tk.Label(window,text="路径",font=('黑体',12))
 data_path.place(x = 10, y = 35, width=75, height=25)
 data_path_entry = tk.Entry(window,textvariable=var_path)

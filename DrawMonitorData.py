@@ -2,16 +2,20 @@
 import os
 import time
 import tkinter as tk
+
+import wmi
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 from matplotlib.figure import Figure
 import pandas as pd
 from tkinter.filedialog import askdirectory
 from watchdog.observers import Observer
+from tkinter import messagebox
 from watchdog.events import *
 import tkutils as tku
 import math
 import threading
+import win32com.client
 
 def watchFile(datapath):
     print("线程开始")
@@ -26,6 +30,33 @@ def watchFile(datapath):
         observer.stop()
     observer.join()
 
+
+
+
+
+def encrypt(key, content):  # key:密钥,content:明文
+    EncryptedData = win32com.client.Dispatch('CAPICOM.EncryptedData')
+    EncryptedData.Algorithm.KeyLength = 5
+    EncryptedData.Algorithm.Name = 2
+    EncryptedData.SetSecret(key)
+    EncryptedData.Content = content
+    return EncryptedData.Encrypt()
+def decrypt(key, content):  # key:密钥,content:密文
+    EncryptedData = win32com.client.Dispatch('CAPICOM.EncryptedData')
+    EncryptedData.Algorithm.KeyLength = 5
+    EncryptedData.Algorithm.Name = 2
+    EncryptedData.SetSecret(key)
+    EncryptedData.Decrypt(content)
+    str = EncryptedData.Content
+    return str
+def get_license():
+    l = open("./license.txt")
+    s1 = encrypt("mining514",l.readline())
+    s2 = decrypt("mining514",s1)
+    s3 = decrypt("Mining514",s1)
+    print(s1,s2,s3)
+
+
 class App:
     def __init__(self):
         self.root = tk.Tk()
@@ -37,7 +68,9 @@ class App:
         self.no_title = False
         self.dataPath=os.path.dirname(__file__)
         self.filePath=""
-        self.modifyTheata=170
+        self.modifyTheata=tk.StringVar(value='110')
+        code = "BFEBFBFF00030678"
+        self.mainboardCode = tk.StringVar(value=code)
         self.fileList=[]
         self.currentFilename=''
         self.show_title()
@@ -67,6 +100,8 @@ class App:
         self.theataEntry = tk.Entry(self.frame_topBar,width=10,textvariable=str(self.modifyTheata))
         self.theataEntry.pack(side=tk.LEFT,padx=10)
         tk.Button(self.frame_topBar,text='应用',command=self.applyModifyTheata).pack(side=tk.LEFT,padx=5)
+        self.machineCode = tk.Entry(self.frame_topBar, width=20,textvariable=self.mainboardCode)
+        self.machineCode.pack(side=tk.LEFT, padx=10)
         self.filePathLable= tk.Label(self.root,text=self.dataPath)
         self.filePathLable.pack(side=tk.TOP,ipadx=5,fill=tk.X)
         #左侧列表
@@ -80,7 +115,7 @@ class App:
         self.file_listBox.bind("<Double-1>",self.listboxSelcClick)
 
         #绘图区域
-        self.f = Figure(figsize=(5, 5), dpi=100)
+        self.f = Figure(figsize=(3, 3), dpi=100)#为了适应小屏幕的分辨率将尺寸缩小
         self.a = self.f.add_subplot(111)  # 添加子图:1行1列第1个
 
         # 将绘制的图形显示到tkinter:创建属于root的canvas画布,并将图f置于画布上
@@ -97,25 +132,32 @@ class App:
         self.root.overrideredirect(self.no_title)
         self.no_title = not self.no_title
     def dataPathSelection(self):
-        #选择数据路径
-        del self.fileList[:]#清空数据
-        self.file_listBox.delete(0,tk.END)
-        self.dataPath = askdirectory()
-        self.filePathLable["text"] = "监测文件夹：" + self.dataPath
-        # print self.dataPath
-        dir = os.listdir(self.dataPath)
-        f_num = len(dir)
-        f_Name = []
-        for f in dir:
-            if f[-4:] != ".csv":
-                f_num = f_num - 1
-            else:
-                f_Name.append(f)
-                self.file_listBox.insert(tk.END, f)
-        self.fileList = f_Name
-        watchThreading = threading.Thread(target=watchFile,name="watchthreading",args=((self.dataPath,)))
-        watchThreading.setDaemon(True)
-        watchThreading.start()
+        cpuDetail = register().get_CPU_info()
+        if cpuDetail == app.machineCode.get():
+            print("机器码识别准确")
+            # 选择数据路径
+            del self.fileList[:]  # 清空数据
+            self.file_listBox.delete(0, tk.END)
+            self.dataPath = askdirectory()
+            self.filePathLable["text"] = "监测文件夹：" + self.dataPath
+            # print self.dataPath
+            dir = os.listdir(self.dataPath)
+            f_num = len(dir)
+            f_Name = []
+            for f in dir:
+                if f[-4:] != ".csv":
+                    f_num = f_num - 1
+                else:
+                    f_Name.append(f)
+                    self.file_listBox.insert(tk.END, f)
+            self.fileList = f_Name
+            watchThreading = threading.Thread(target=watchFile, name="watchthreading", args=((self.dataPath,)))
+            watchThreading.setDaemon(True)
+            watchThreading.start()
+        else:
+            messagebox.showwarning("注册检验", "机器码不正确，请联系管理员，024-83689193")
+            self.root.quit()
+
 
     def selectListBox(self,filepath):
 
@@ -147,17 +189,18 @@ class App:
             if loopTimes>0:
                 for id in range(loopTimes):
                     if not float(dataRadius[id]) < 0:
-                        if not float(dataTheata[id])<0:
-                            # cmath是复数运算
-                            try:
-                                x.append(
-                                    float(dataRadius[id]) * math.cos(
-                                        math.radians(float(dataTheata[id]) + float(delta))))
-                                y.append(
-                                    float(dataRadius[id]) * math.sin(
-                                        math.radians(float(dataTheata[id]) + float(delta))))
-                            except:
-                                errorID += 1
+                        if not float(dataRadius[id]) > 10000:#暂时限制不大于10m的范围
+                            if not float(dataTheata[id]) < 0:
+                                # cmath是复数运算
+                                try:
+                                    x.append(
+                                        float(dataRadius[id]) * math.cos(
+                                            math.radians(float(dataTheata[id]) + float(delta))))
+                                    y.append(
+                                        float(dataRadius[id]) * math.sin(
+                                            math.radians(float(dataTheata[id]) + float(delta))))
+                                except:
+                                    errorID += 1
                 print("忽略异常点%s个。" % errorID)
                 # 闭合曲线
                 x.append(x[0])
@@ -228,8 +271,42 @@ class MyHandler(FileSystemEventHandler):
         app.filePath=event.src_path
 
 
+class register:
+    def __init__(self):
+        self.Des_Key = "DESCRYPT"  # Key
+        self.Des_IV = "\x15\1\x2a\3\1\x23\2\0"  # 自定IV向量
+
+    global s
+    s = wmi.WMI()
+
+    def get_mainboard_info(self):
+        mainboard = []
+        for board_id in s.Win32_BaseBoard():
+            mainboard.append(board_id.SerialNumber.strip().strip('.'))
+        # print(mainboard)
+        return mainboard
+    def get_CPU_info(self):
+        cpu = []
+        cp = s.Win32_Processor()
+        for u in cp:
+            cpu.append(
+                {
+                    "Name": u.Name,
+                    "Serial Number": u.ProcessorId,
+                    "CoreNum": u.NumberOfCores
+                }
+            )
+        # print(":::CPU info:", cpu[0]["Serial Number"])
+        return cpu[0]["Serial Number"]
+
+
+
 if __name__ == "__main__":
+    get_license()
     app = App()
     app.root.mainloop()
+
+
+
 
 
