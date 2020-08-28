@@ -2,8 +2,6 @@
 import os
 import time
 import tkinter as tk
-
-import wmi
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 from matplotlib.figure import Figure
@@ -16,6 +14,7 @@ import tkutils as tku
 import math
 import threading
 import win32com.client
+import Register
 
 def watchFile(datapath):
     print("线程开始")
@@ -29,10 +28,6 @@ def watchFile(datapath):
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
-
-
-
-
 
 def encrypt(key, content):  # key:密钥,content:明文
     EncryptedData = win32com.client.Dispatch('CAPICOM.EncryptedData')
@@ -50,11 +45,9 @@ def decrypt(key, content):  # key:密钥,content:密文
     str = EncryptedData.Content
     return str
 def get_license():
-    l = open("./license.txt")
-    s1 = encrypt("mining514",l.readline())
-    s2 = decrypt("mining514",s1)
-    s3 = decrypt("Mining514",s1)
-    print(s1,s2,s3)
+    f = open("./conf.ini")
+    code = f.read()
+    # print (code)
 
 
 class App:
@@ -69,9 +62,10 @@ class App:
         self.dataPath=os.path.dirname(__file__)
         self.filePath=""
         self.modifyTheata=tk.StringVar(value='110')
-        code = "BFEBFBFF00030678"
-        self.mainboardCode = tk.StringVar(value=code)
+        # code = "BFEBFBFF00030678"
+        # self.mainboardCode = tk.StringVar(value=code)
         self.fileList=[]
+        self.ShowAllData = tk.IntVar(value=0)
         self.currentFilename=''
         self.show_title()
         self.body()
@@ -100,8 +94,9 @@ class App:
         self.theataEntry = tk.Entry(self.frame_topBar,width=10,textvariable=str(self.modifyTheata))
         self.theataEntry.pack(side=tk.LEFT,padx=10)
         tk.Button(self.frame_topBar,text='应用',command=self.applyModifyTheata).pack(side=tk.LEFT,padx=5)
-        self.machineCode = tk.Entry(self.frame_topBar, width=20,textvariable=self.mainboardCode)
-        self.machineCode.pack(side=tk.LEFT, padx=10)
+        # self.machineCode = tk.Entry(self.frame_topBar, width=20,textvariable=self.mainboardCode)
+        self.showAllHistoryDataToggle = tk.Checkbutton(self.frame_topBar,text="全部历史数据",variable=self.ShowAllData,command=self.updateListBox)
+        self.showAllHistoryDataToggle.pack(side=tk.LEFT, padx=10)
         self.filePathLable= tk.Label(self.root,text=self.dataPath)
         self.filePathLable.pack(side=tk.TOP,ipadx=5,fill=tk.X)
         #左侧列表
@@ -132,25 +127,15 @@ class App:
         self.root.overrideredirect(self.no_title)
         self.no_title = not self.no_title
     def dataPathSelection(self):
-        cpuDetail = register().get_CPU_info()
-        if cpuDetail == app.machineCode.get():
+        authorizedStatus = Register.CheckAuthorized()
+        localMachineCode = Register.DesEncrypt(Register.getCVolumeSerialNumber())
+        # print(localMachineCode)
+        # print(authorizedStatus)
+        if str(authorizedStatus) == str(localMachineCode):
             print("机器码识别准确")
             # 选择数据路径
-            del self.fileList[:]  # 清空数据
-            self.file_listBox.delete(0, tk.END)
             self.dataPath = askdirectory()
-            self.filePathLable["text"] = "监测文件夹：" + self.dataPath
-            # print self.dataPath
-            dir = os.listdir(self.dataPath)
-            f_num = len(dir)
-            f_Name = []
-            for f in dir:
-                if f[-4:] != ".csv":
-                    f_num = f_num - 1
-                else:
-                    f_Name.append(f)
-                    self.file_listBox.insert(tk.END, f)
-            self.fileList = f_Name
+            self.updateListBox()
             watchThreading = threading.Thread(target=watchFile, name="watchthreading", args=((self.dataPath,)))
             watchThreading.setDaemon(True)
             watchThreading.start()
@@ -217,6 +202,7 @@ class App:
 
 
     def listboxSelcClick(self,event):
+        # print(self.file_listBox.curselection())
         self.currentFilename= self.fileList[self.file_listBox.curselection()[0]]
         # print(self.currentFilename)
         self.filePath=self.dataPath+"/"+self.currentFilename
@@ -226,14 +212,13 @@ class App:
     def applyModifyTheata(self):
         self.selectListBox(self.filePath)
 
-class MyHandler(FileSystemEventHandler):
-    def on_modified(self, event):
-        #print("文件被修改了 %s" % event.src_path)
-        del app.fileList[:]  # 清空数据
-        app.file_listBox.delete(0, tk.END)
-        app.filePathLable["text"] = "监测文件夹：" + app.dataPath
+    def updateListBox(self):
+        # print("文件被修改了 %s" % event.src_path)
+        del self.fileList[:]  # 清空数据
+        self.file_listBox.delete(0, tk.END)
+        self.filePathLable["text"] = "监测文件夹：" + self.dataPath
         # print self.dataPath
-        dir = os.listdir(app.dataPath)
+        dir = os.listdir(self.dataPath)
         f_num = len(dir)
         f_Name = []
         for f in dir:
@@ -241,68 +226,34 @@ class MyHandler(FileSystemEventHandler):
                 f_num = f_num - 1
             else:
                 f_Name.append(f)
-                app.file_listBox.insert(tk.END, f)
-        app.fileList = f_Name
+                # self.file_listBox.insert(tk.END, f)
+
+        f_Name.reverse()
+        self.fileList = f_Name
+        # print(self.ShowAllData)
+        if int(self.ShowAllData.get()) == 0:  # 仅显示最新的15条数据
+            for item in f_Name[:15]:
+                self.file_listBox.insert(tk.END, item)
+        else:
+            for item in f_Name:
+                self.file_listBox.insert(tk.END, item)
         # app.file_listBox.insert(tk.END, str(event.src_path).split('\\')[-1])
+
+
+
+class MyHandler(FileSystemEventHandler):
+    def on_modified(self, event):
+        app.updateListBox()
         app.selectListBox(event.src_path)
         app.filePath = event.src_path
     def on_created(self, event):
-        #print("文件被创建了 %s" % event.src_path)
-        # data=pd.read_csv(event.src_path, sep=',', header=None,
-        #                    names=['Theata', 'Radius', 'Quality'])
-        # print(data)
-        #该路径‘/’、‘\’共存，暂未处理
-        del app.fileList[:]  # 清空数据
-        app.file_listBox.delete(0, tk.END)
-        app.filePathLable["text"] = "监测文件夹：" + app.dataPath
-        # print self.dataPath
-        dir = os.listdir(app.dataPath)
-        f_num = len(dir)
-        f_Name = []
-        for f in dir:
-            if f[-4:] != ".csv":
-                f_num = f_num - 1
-            else:
-                f_Name.append(f)
-                app.file_listBox.insert(tk.END, f)
-        app.fileList = f_Name
-        # app.file_listBox.insert(tk.END, str(event.src_path).split('\\')[-1])
+        app.updateListBox()
         app.selectListBox(event.src_path)
-        app.filePath=event.src_path
-
-
-class register:
-    def __init__(self):
-        self.Des_Key = "DESCRYPT"  # Key
-        self.Des_IV = "\x15\1\x2a\3\1\x23\2\0"  # 自定IV向量
-
-    global s
-    s = wmi.WMI()
-
-    def get_mainboard_info(self):
-        mainboard = []
-        for board_id in s.Win32_BaseBoard():
-            mainboard.append(board_id.SerialNumber.strip().strip('.'))
-        # print(mainboard)
-        return mainboard
-    def get_CPU_info(self):
-        cpu = []
-        cp = s.Win32_Processor()
-        for u in cp:
-            cpu.append(
-                {
-                    "Name": u.Name,
-                    "Serial Number": u.ProcessorId,
-                    "CoreNum": u.NumberOfCores
-                }
-            )
-        # print(":::CPU info:", cpu[0]["Serial Number"])
-        return cpu[0]["Serial Number"]
+        app.filePath = event.src_path
 
 
 
 if __name__ == "__main__":
-    get_license()
     app = App()
     app.root.mainloop()
 

@@ -36,6 +36,39 @@ def DesDecrypt(string):
 Des_Key = "514--514"  # Key
 Des_IV = "83689193"  # 自定IV向量
 
+def CheckAuthorized():
+    if os.path.isfile("./conf.ini"):
+        print ("存在注册文件。")
+        f = open("./conf.ini")
+        # print(f.read())
+        code = f.read()
+        return code
+    else:
+        return 'Null'
+        print("无注册文件，请联系管理员")
+def regist():
+    localCode = getCVolumeSerialNumber()
+    print("是否对如下机器进行注册：%s?" % localCode)
+    judge = input("[Y/N]")
+    if judge == "Y" or judge == "y":
+        if os.path.isfile("./conf.ini"):
+            f = open("./conf.ini",'w')
+            encryptCode=DesEncrypt(localCode)
+            f.write(str(encryptCode))
+            f.close()
+        else:
+            f = open("./conf.ini", 'w')
+            encryptCode = DesEncrypt(localCode)
+            f.write(str(encryptCode))
+            f.close()
+    else:
+        newCode = input("请输入新机器码：")
+        f = open("./conf.ini", 'w')
+        encryptCode = DesEncrypt(newCode)
+        f.write(str(encryptCode))
+        f.close()
+    print("Done")
+
 
 def Register():
     if os.path.isfile('conf.bin'):
