@@ -108,6 +108,7 @@ def StartSocketClient():
     host = socket.gethostname()  # 获取本地主机名
     s.connect((ip_str, int(port_str)))
     s.send("\xAA\x96\xAC\x00\x01\x00\x01\x69")
+    path = var_path.get()+"/clientFiles/"
     while not stop_socket:  # 进入循环，不断接受客户端的链接请求
         file_num = s.recv(1024)
         # print(file_num)
@@ -121,9 +122,9 @@ def StartSocketClient():
                 s.send(filesize)
                 # print(filesize)
                 filesize = int(filesize)
-                if not os.path.isdir("./client/"):
-                    os.makedirs("./client/")
-                f_pic = open("./client/" + filename, "ab")
+                if not os.path.isdir(path):
+                    os.makedirs(path)
+                f_pic = open(path + filename, "ab")
                 has_receive = 0
                 # file_type = s.recv(80)
                 while has_receive < filesize:
